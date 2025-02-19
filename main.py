@@ -1,4 +1,5 @@
 from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import FileResponse
 from openai import OpenAI
 from pathlib import Path
 import shutil
@@ -38,7 +39,6 @@ async def transcribe(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
 
     file_to_transcript = open(file_path, "rb")
-
     transcription = openai.audio.transcriptions.create(
         file=file_to_transcript,
         model="whisper-1",
@@ -71,9 +71,4 @@ async def transcribe(file: UploadFile = File(...)):
     ffmpeg.input(file_path).output(filename=output_path, vf=f"subtitles={
         subs_path.with_suffix(".srt")}").run()
 
-# TODO - Have a POST request on /subtitle that takes a file, generate the subtitle and return a file with the subtitle
-# - DONE - I'll need to save the file in the uploads directory
-# - DONE - I'll need to send a request to whisper API to generate the transcription for this file
-# - DONE - Return the transcription
-# - DONE - Sync the transcription with the video
-# - Return the video file with the transcription
+    return FileResponse(output_path)
