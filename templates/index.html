@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FluentFlow - Tradutor e Legenda de Vídeo</title>
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        color: #333;
+      }
+
+      .container {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        max-width: 600px;
+        width: 100%;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        color: #4a90e2;
+        margin-bottom: 20px;
+      }
+
+      .upload-section {
+        background-color: #f8f8f8;
+        border: 2px dashed #4a90e2;
+        border-radius: 12px;
+        padding: 40px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .upload-section:hover {
+        background-color: #f1f7ff;
+        border-color: #357ab7;
+      }
+
+      .upload-icon {
+        font-size: 3rem;
+        color: #4a90e2;
+        transition: opacity 0.3s ease;
+      }
+
+      .upload-text {
+        font-size: 1.2rem;
+        color: #666;
+        margin-top: 10px;
+      }
+
+      .file-preview {
+        display: none;
+        align-items: center;
+        flex-direction: column;
+      }
+
+      .file-preview img {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+        margin-bottom: 10px;
+      }
+
+      .file-name {
+        font-size: 1rem;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+      }
+
+      .change-file {
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        font-size: 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      .change-file:hover {
+        background-color: #c0392b;
+      }
+
+      input[type="file"] {
+        display: none;
+      }
+
+      button {
+        background-color: #4a90e2;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        font-size: 1.1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        width: 100%;
+        margin-top: 20px;
+      }
+
+      button:hover {
+        background-color: #357ab7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>FluentFlow</h1>
+      <p>
+        Selecione ou arraste um arquivo de vídeo para transcrever, traduzir e
+        adicionar legendas. Ao final, você poderá baixar o vídeo com as legendas
+        já embutidas.
+      </p>
+
+      <div class="upload-section" id="upload-drop-area">
+        <!-- Default Upload Icon -->
+        <div class="upload-icon" id="upload-icon">📤</div>
+        <div class="upload-text" id="upload-text">Arraste um vídeo aqui</div>
+
+        <!-- File Preview (Hidden Initially) -->
+        <div class="file-preview" id="file-preview">
+          <div class="upload-icon" id="file-icon-preview">📂</div>
+          <div class="file-name" id="file-name"></div>
+          <button class="change-file" id="change-file">Trocar Arquivo</button>
+        </div>
+
+        <input type="file" id="video-file" accept="video/*" required />
+      </div>
+
+      <button id="process-button">Processar Vídeo</button>
+
+      <p
+        id="processing-message"
+        style="
+          display: none;
+          color: #4a90e2;
+          font-weight: bold;
+          margin-top: 10px;
+        "
+      >
+        Processando o vídeo... Aguarde!
+      </p>
+
+      <script>
+        const uploadDropArea = document.getElementById("upload-drop-area");
+        const fileInput = document.getElementById("video-file");
+        const uploadIcon = document.getElementById("upload-icon");
+        const uploadText = document.getElementById("upload-text");
+        const filePreview = document.getElementById("file-preview");
+        const fileNameDisplay = document.getElementById("file-name");
+        const changeFileButton = document.getElementById("change-file");
+
+        // Drag & Drop functionality
+        uploadDropArea.addEventListener("dragover", function (event) {
+          event.preventDefault();
+          uploadDropArea.style.borderColor = "#357ab7";
+          uploadDropArea.style.backgroundColor = "#f1f7ff";
+        });
+
+        uploadDropArea.addEventListener("dragleave", function () {
+          uploadDropArea.style.borderColor = "#4a90e2";
+          uploadDropArea.style.backgroundColor = "#f8f8f8";
+        });
+
+        uploadDropArea.addEventListener("drop", function (event) {
+          event.preventDefault();
+          uploadDropArea.style.borderColor = "#4a90e2";
+          uploadDropArea.style.backgroundColor = "#f8f8f8";
+          const files = event.dataTransfer.files;
+          if (files.length > 0) {
+            fileInput.files = files;
+            updateFilePreview(files[0]);
+          }
+        });
+
+        // Click event for selecting file
+        uploadDropArea.addEventListener("click", function () {
+          fileInput.click();
+        });
+
+        fileInput.addEventListener("change", function () {
+          const file = fileInput.files[0];
+          if (file) {
+            updateFilePreview(file);
+          }
+        });
+
+        changeFileButton.addEventListener("click", function () {
+          fileInput.click();
+        });
+
+        function updateFilePreview(file) {
+          uploadIcon.style.display = "none";
+          uploadText.style.display = "none";
+          filePreview.style.display = "flex";
+          fileNameDisplay.textContent = file.name;
+        }
+
+        const processButton = document.getElementById("process-button");
+        const processingMessage = document.getElementById("processing-message");
+
+        processButton.addEventListener("click", async function () {
+          const file = fileInput.files[0];
+          if (!file) {
+            alert("Por favor, selecione um arquivo de vídeo.");
+            return;
+          }
+
+          processingMessage.style.display = "block"; // Exibir a mensagem de processamento
+
+          const formData = new FormData();
+          formData.append("file", file);
+
+          try {
+            const response = await fetch("http://127.0.0.1:8000/translate", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (response.ok) {
+              const blob = await response.blob();
+              const url = URL.createObjectURL(blob);
+              const downloadLink = document.createElement("a");
+              downloadLink.href = url;
+              downloadLink.download = file.name;
+              downloadLink.click();
+            } else {
+              alert("Erro ao processar o arquivo de vídeo.");
+            }
+          } catch (error) {
+            console.error("Erro:", error);
+            alert("Ocorreu um erro durante o processamento.");
+          }
+
+          processingMessage.style.display = "none"; // Esconder a mensagem após o processo
+        });
+      </script>
+    </div>
+  </body>
+</html>
