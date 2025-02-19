@@ -1,5 +1,6 @@
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, File, UploadFile, Request
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from openai import OpenAI
 from pathlib import Path
 import shutil
@@ -10,6 +11,8 @@ api_key = os.environ["OPENAI_API_KEY"]
 
 app = FastAPI()
 openai = OpenAI(api_key=api_key)
+
+templates = Jinja2Templates(directory="templates")
 
 SUBTITLES_DIR = Path("subtitles")
 UPLOAD_DIR = Path("uploads")
@@ -29,6 +32,14 @@ def generate_subtitle_section_time(seconds):
     return f"{hours:02}:{minutes:02}:{secs:02},{millis:03}"
 
 
+@app.get("/",response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse(
+            request=request,
+            name="index.html"
+        )
+
+
 @app.post("/translate")
 async def transcribe(file: UploadFile = File(...)):
     file_path = UPLOAD_DIR / file.filename
@@ -46,15 +57,13 @@ async def transcribe(file: UploadFile = File(...)):
         timestamp_granularities=["segment"]
     )
 
-    segments_texts = [f"{i} | {segment.text}" for i,
-                      segment in enumerate(transcription.segments)]
+    segments_texts = [f"{i} | {segment.text}" for i, segment in enumerate(transcription.segments)]
     combined_text = "\n".join(segments_texts)
     translation = openai.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a professional translator."},
-            {"role": "user", "content": f"Translate this English text into Portuguese, return only the translation without any additional text: {
-                combined_text}"},
+            {"role": "user", "content": f"Translate this English text into Portuguese, return only the translation without any additional text: {combined_text}"},
         ]
     )
 
@@ -68,7 +77,7 @@ async def transcribe(file: UploadFile = File(...)):
 
             subs.write(f"{id + 1}\n{start_str} --> {end_str}\n{text}\n\n")
 
-    ffmpeg.input(file_path).output(filename=output_path, vf=f"subtitles={
-        subs_path.with_suffix(".srt")}").run()
+    subs_srt = subs_path.with_suffix(".srt")
+    ffmpeg.input(file_path).output(filename=output_path, vf=f"subtitles={subs_srt}").run()
 
     return FileResponse(output_path)
