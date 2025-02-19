@@ -1,2 +1,6 @@
 .venv
 .env
+output/
+subtitles/
+uploads/
+__pycache__
